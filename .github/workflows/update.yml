@@ -2,8 +2,9 @@ name: Update BestCF IP list
 
 on:
   schedule:
-    # 每 30 分钟一次（UTC 整点/半点）。GitHub 高峰期可能延迟几分钟。
-    - cron: '*/30 * * * *'
+    # 每 5 分钟（GitHub 支持的最短间隔）。用 3-58/5 避开整点拥堵，
+    # GitHub 官方建议不要在 :00 触发。想更省就改回 */30。
+    - cron: '3-58/5 * * * *'
   workflow_dispatch:        # 支持手动触发
   push:
     branches: [main]        # 改了脚本也顺带跑一次
@@ -39,13 +40,14 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ipv4.txt
-          if git diff --cached --quiet; then
+          if git diff --quiet -- ipv4.txt; then
             echo "内容无变化，跳过提交"
-          else
-            git commit -m "chore: update ipv4 list ($(date -u '+%Y-%m-%d %H:%M UTC'))"
-            git push
+            exit 0
           fi
+          git add ipv4.txt
+          git commit -m "chore: update ipv4 list ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+          git push
 
       - name: Summary
         run: |
